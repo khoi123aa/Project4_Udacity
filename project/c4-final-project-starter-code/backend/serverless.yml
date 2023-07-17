@@ -7,12 +7,14 @@ plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
   - serverless-plugin-tracing
+  - serverless-reqvalidator-plugin
+  - serverless-aws-documentation
 
 provider:
   name: aws
   runtime: nodejs14.x
   memorySize: 2048
-  lambdaHashingVersion: '20230617'
+  lambdaHashingVersion: '20201221'
 
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
@@ -203,14 +205,6 @@ functions:
 
 resources:
   Resources:
-    RequestBodyValidator:
-      Type: AWS::ApiGateway::RequestValidator
-      Properties:
-        Name: 'request-body-validator'
-        RestApiId:
-          Ref: ApiGatewayRestApi
-        ValidateRequestBody: true
-        ValidateRequestParameters: false
     # Add necessary AWS resources. You will need at least the following AWS resources
     # TODO: Fill the properties
     # Feel free to change the names as you like. 
@@ -288,7 +282,7 @@ resources:
     BucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
-      PolicyDocument:
+        PolicyDocument:
           Id: MyPolicy
           Version: "2012-10-17"
           Statement:
@@ -297,4 +291,14 @@ resources:
               Principal: '*'
               Action: '*'
               Resource: 'arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*'
-          Bucket: !Ref AttachmentsBucket
+        Bucket: !Ref AttachmentsBucket
+
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+        
