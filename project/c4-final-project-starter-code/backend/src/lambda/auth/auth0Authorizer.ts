@@ -55,6 +55,7 @@ export const handler = async (
 }
 
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
+  logger.info("Verifying token: ")
   const token = getToken(authHeader)
   const jwt: Jwt = decode(token, { complete: true }) as Jwt
 
@@ -69,10 +70,10 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
 
   try {
     const certificate = await getCertificate();
-    const verifiedToken = verify(token, certificate, {algorithms: ["RS256"]})
+    const verifiedToken = verify(token, certificate, {algorithms: ["RS256"]}) as JwtPayload
     logger.info("Authenticated token: ", verifiedToken)
 
-    return verifiedToken as JwtPayload
+    return verifiedToken
   } catch (e) {
     logger.error("Unable to authenticate", e);
   }
