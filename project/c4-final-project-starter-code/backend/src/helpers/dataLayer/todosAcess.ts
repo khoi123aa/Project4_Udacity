@@ -15,18 +15,31 @@ export class TodosAccess {
       private readonly docClient: DocumentClient = createDynamoDBClient(),
       private readonly todosTable = process.env.TODOS_TABLE) {
     }
-  
-    async deleteTodosByTodoId(todoId: string) {
-      await this.docClient.delete({
+
+    async getTodosByUserId(userId: string): Promise<TodoItem[]> {
+      const result = await this.docClient.query({
         TableName: this.todosTable,
-        Key: {
-          'todoId': todoId,
-        }
+        IndexName: 'userIdGSI',
+        KeyConditionExpression: 'userId = :userId',
+        ExpressionAttributeValues: {
+          ':userId': userId
+        },
+        ScanIndexForward: false
       }).promise()
+      const items = result.Items
+      return items as TodoItem[]
+    }
+  
+    async createTodo(todoItem: TodoItem): Promise<TodoItem> {
+      await this.docClient.put({
+        TableName: this.todosTable,
+        Item: todoItem
+      }).promise()
+  
+      return todoItem
     }
   
     async updateTodo(todoId: string, updatedTodo: TodoUpdate){
-  
       await this.docClient.update({
           TableName: this.todosTable,
           Key: {
@@ -42,29 +55,15 @@ export class TodosAccess {
               ":dueDate": updatedTodo.dueDate
           }
       }).promise()
-  }
-  
-    async getTodosByUserId(userId: string): Promise<TodoItem[]> {
-      const result = await this.docClient.query({
-        TableName: this.todosTable,
-        IndexName: 'userIdGSI',
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId
-        },
-        ScanIndexForward: false
-      }).promise()
-      const items = result.Items
-      return items as TodoItem[]
     }
-  
-    async createTodo(todos: TodoItem): Promise<TodoItem> {
-      await this.docClient.put({
+        
+    async deleteTodosByTodoId(todoId: string) {
+      await this.docClient.delete({
         TableName: this.todosTable,
-        Item: todos
+        Key: {
+          'todoId': todoId,
+        }
       }).promise()
-  
-      return todos
     }
   }
   

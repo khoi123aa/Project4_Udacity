@@ -16,6 +16,7 @@ provider:
   memorySize: 2048
   lambdaHashingVersion: '20201221'
 
+
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
 
@@ -26,7 +27,7 @@ provider:
   # Use these variables in the functions and resouorces section below. For example, 
   # ${self:provider.environment.ATTACHMENT_S3_BUCKET}
   environment:
-    TODOS_TABLE: Todos-${self:provider.stage}
+    TODOS_TABLE: P4-Todos-${self:provider.stage}
     TODOS_CREATED_AT_INDEX: CreatedAtIndex
     ATTACHMENT_S3_BUCKET: khoitha-c4-todo-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
@@ -262,6 +263,9 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:provider.environment.ATTACHMENT_S3_BUCKET}
+        PublicAccessBlockConfiguration:
+          BlockPublicPolicy: false
+          RestrictPublicBuckets: false
         CorsConfiguration:
             CorsRules:
               - AllowedOrigins:
@@ -274,7 +278,7 @@ resources:
                   - POST
                   - DELETE
                   - HEAD
-                MaxAge: 3000
+                MaxAge: 300
 
     # TODO: Complete the policy below and attach it to the bucket defined above
     # For cross referencing the name of the bucket, use "!Ref AttachmentsBucket"
@@ -288,9 +292,9 @@ resources:
             - Sid: PublicReadForGetBucketObjects
               Effect: Allow
               Principal: '*'
-              Action: '*'
+              Action: 's3:GetObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*'
-        Bucket: !Ref AttachmentsBucket
+      Bucket: !Ref AttachmentsBucket
 
     RequestBodyValidator:
       Type: AWS::ApiGateway::RequestValidator
