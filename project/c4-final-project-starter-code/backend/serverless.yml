@@ -2,6 +2,7 @@
 org: khoitha
 app: serverless-todo-app
 service: serverless-todo-app
+frameworkVersion: 3.33.0
 
 plugins:
   - serverless-webpack
@@ -15,7 +16,6 @@ provider:
   runtime: nodejs14.x
   memorySize: 2048
   lambdaHashingVersion: '20201221'
-
 
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
@@ -31,8 +31,6 @@ provider:
     TODOS_CREATED_AT_INDEX: CreatedAtIndex
     ATTACHMENT_S3_BUCKET: khoitha-c4-todo-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
-    PROJECT_NAME: serverless-todo-app
-    INDEX_NAME: ${self:provider.environment.TODOS_CREATED_AT_INDEX}
 
   logs:
     # Enable API Gateway logs
@@ -69,30 +67,28 @@ functions:
   # TODO: Configure this function - 
   # Provide iamRoleStatements property for performing Actions on DynamoDB
   GetTodos:
-    handler: src/lambda/http/getTodos.handler
-    memorySize: 3000
-    events:
-      - http:
-          method: get
-          path: todos
-          cors: true
-          authorizer: Auth
-    iamRoleStatements:
+      handler: src/lambda/http/getTodos.handler
+      events:
+        - http:
+            method: get
+            path: todos
+            cors: true
+            authorizer: Auth
+      iamRoleStatements:
       - Effect: Allow
         Action:
           - dynamodb:Query
-          - dynamodb:GetItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
       - Effect: Allow
         Action:
-          - s3:GetObject
-        Resource: arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_CREATED_AT_INDEX}
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
           - xray:PutTelemetryRecords
         Resource:
-          - "*"
+          - '*'
 
   # TODO: Configure this function - 
   # Provide iamRoleStatements property. Decide the Actions and AWS Resource. 
@@ -106,7 +102,6 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
-          reqValidatorName: RequestBodyValidator
           request:
             schemas:
               application/json: ${file(models/create-todo-model.json)}
@@ -114,12 +109,11 @@ functions:
       - Effect: Allow
         Action:
           - dynamodb:PutItem
-          - dynamodb:UpdateItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
-          - xray:PutTelemetryRecords
+          - - xray:PutTelemetryRecords
         Resource:
           - "*"
 
@@ -139,9 +133,8 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
-          - dynamodb:UpdateItem
-          - dynamodb:PutItem
           - dynamodb:GetItem
+          - dynamodb:UpdateItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
       - Effect: Allow
         Action:
@@ -163,9 +156,8 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
+          - dynamodb:GetItem
           - dynamodb:DeleteItem
-          - dynamodb:PutItem
-          - dynamodb:UpdateItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
       - Effect: Allow
         Action:
@@ -188,8 +180,6 @@ functions:
       - Effect: Allow
         Action:
           - s3:PutObject
-          - s3:GetObject
-          - '*'
         Resource: arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*
       - Effect: Allow
         Action:
@@ -294,7 +284,7 @@ resources:
               Principal: '*'
               Action: 's3:GetObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*'
-      Bucket: !Ref AttachmentsBucket
+        Bucket: !Ref AttachmentsBucket
 
     RequestBodyValidator:
       Type: AWS::ApiGateway::RequestValidator

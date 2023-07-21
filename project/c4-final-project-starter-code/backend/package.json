@@ -5,9 +5,8 @@
     "dependencies": {
         "@types/axios": "^0.14.0",
         "@types/http-errors": "^1.8.2",
-        "aws-xray-sdk": "^3.3.6",
+        "aws-xray-sdk": "^3.5.1",
         "axios": "^0.27.2",
-        "debug": "^4.3.4",
         "http-errors": "^2.0.0",
         "jsonwebtoken": "^8.5.1",
         "middy": "^0.24.0",

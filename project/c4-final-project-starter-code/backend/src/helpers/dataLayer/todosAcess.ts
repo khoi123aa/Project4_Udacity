@@ -13,24 +13,25 @@ const logger = createLogger('TodosAccess')
 export class TodosAccess {
     constructor(
       private readonly docClient: DocumentClient = createDynamoDBClient(),
+      private readonly todosIndex = process.env.TODOS_CREATED_AT_INDEX,
       private readonly todosTable = process.env.TODOS_TABLE) {
     }
 
-    async getTodosByUserId(userId: string): Promise<TodoItem[]> {
+    public async getTodosByUserId(userId: string): Promise<TodoItem[]> {
       const result = await this.docClient.query({
         TableName: this.todosTable,
-        IndexName: 'userIdGSI',
+        IndexName: this.todosIndex,
         KeyConditionExpression: 'userId = :userId',
         ExpressionAttributeValues: {
           ':userId': userId
         },
-        ScanIndexForward: false
       }).promise()
+      
       const items = result.Items
       return items as TodoItem[]
     }
   
-    async createTodo(todoItem: TodoItem): Promise<TodoItem> {
+    public async createTodo(todoItem: TodoItem): Promise<TodoItem> {
       await this.docClient.put({
         TableName: this.todosTable,
         Item: todoItem
@@ -39,15 +40,15 @@ export class TodosAccess {
       return todoItem
     }
   
-    async updateTodo(todoId: string, updatedTodo: TodoUpdate){
+    public async updateTodo(todoId: string, updatedTodo: TodoUpdate){
       await this.docClient.update({
           TableName: this.todosTable,
           Key: {
-              "todoId": todoId
+            todoId
           },
-          UpdateExpression: "set #todoName = :name, done = :done, dueDate = :dueDate",
+          UpdateExpression: "set #name = :name, done = :done, dueDate = :dueDate",
           ExpressionAttributeNames: {
-              "#todoName": "name"
+              "#name": "name"
           },
           ExpressionAttributeValues: {
               ":name": updatedTodo.name,
@@ -57,13 +58,19 @@ export class TodosAccess {
       }).promise()
     }
         
-    async deleteTodosByTodoId(todoId: string) {
+    public async deleteTodosByTodoId(userId: string, todoId: string) {
+      if (userId) {
+      logger.info("Get todo id for delete ${todoId}")
       await this.docClient.delete({
         TableName: this.todosTable,
         Key: {
-          'todoId': todoId,
+            todoId,
+            userId
         }
-      }).promise()
+      }).promise()}
+      else{
+        logger.error("Delete error");
+      }
     }
   }
   

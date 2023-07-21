@@ -55,54 +55,54 @@ export const handler = async (
 }
 
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
-  logger.info("Verifying token: ", authHeader.substring(0, 20))
-  const token = getToken(authHeader)
-  const jwt: Jwt = decode(token, { complete: true }) as Jwt
+  const token = getToken(authHeader);
+  const jwt: Jwt = decode(token, { complete: true }) as Jwt;
 
-  // TODO: Implement token verification
-  // You should implement it similarly to how it was implemented for the exercise for the lesson 5
-  // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  if (!jwt) {
-    logger.error("JWT decoded token not found")
+  const kid: string = jwt.header.kid;
+  let respon = await Axios.get(jwksUrl);
+  const publicKey: string = await getSigninKeys(respon.data.keys,kid);
 
-    throw new Error("Unauthorized access")
-  }
-
-  try {
-    const certificate = await getCertificate();
-    const verifiedToken = verify(token, certificate, {algorithms: ["RS256"]}) as JwtPayload
-    logger.info("Authenticated token: ", verifiedToken)
-
-    return verifiedToken
-  } catch (e) {
-    logger.error("Unable to authenticate", e);
-  }
-  return undefined
+  return verify(token, publicKey, { algorithms: ['RS256'] }) as JwtPayload;
 }
 
 function getToken(authHeader: string): string {
-  if (!authHeader) throw new Error('No authentication header')
+  if (!authHeader) throw new Error('No authentication header');
 
   if (!authHeader.toLowerCase().startsWith('bearer '))
-    throw new Error('Invalid authentication header')
+    throw new Error('Invalid authentication header');
 
-  const split = authHeader.split(' ')
-  const token = split[1]
+  const split = authHeader.split(' ');
+  const token = split[1];
 
-  return token
+  return token;
 }
 
-const getCertificate = async (): Promise<string> => {
-  const response = await Axios.get(jwksUrl)
-  const keys = response.data.keys
+function certToPEM(cert) {
+  cert = cert.match(/.{1,64}/g).join('\n');
+  cert = `-----BEGIN CERTIFICATE-----\n${cert}\n-----END CERTIFICATE-----\n`;
+  return cert;
+}
 
-  if (keys?.length) {
-    const signinKeys = keys.filter(key => {
-      return key.use === "sig" && key.kty === "RSA" && key.alg === "RS256" && key.n && key.e && key.kid && (key.x5c && key.x5c.length)
-    })
+async function getSigninKeys(keys, kid) {
+  const signinKeys = keys
+      .filter(key => key.use === 'sig' && key.kty === 'RSA' && key.kid && ((key.x5c && key.x5c.length) || (key.n && key.e)))
+      .map(key => {
+        return {
+          kid: key.kid,
+          nbf: key.nbf,
+          publicKey: certToPEM(key.x5c[0])
+        };
+      });
 
-    return `-----BEGIN CERTIFICATE-----\\n${signinKeys[0].x5c[0]}\\n-----END CERTIFICATE-----\\n`
+  if (!signinKeys) {
+    throw new Error('The JWKS endpoint did not contain any signing keys');
   }
 
-  throw new Error("Invalid authentication token");
+  const signingKey = signinKeys.find(key => key.kid === kid);
+
+  if (!signingKey) {
+    throw new Error(`Key not found'${kid}'`);
+  }
+
+  return signingKey.publicKey;
 }

@@ -5,17 +5,16 @@ import * as middy from 'middy'
 import { cors, httpErrorHandler } from 'middy/middlewares'
 
 import { deleteTodosByTodoId } from '../../helpers/businessLogic/todos'
+import { getUserId } from '../utils'
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     const todoId = event.pathParameters.todoId
     // TODO: Remove a TODO item by id
-    await deleteTodosByTodoId(todoId);
+    const userId = getUserId(event);
+    await deleteTodosByTodoId(userId, todoId);
         return {
             statusCode: 202,
-            headers: {
-                'Access-Control-Allow-Origin': '*'
-            },
             body: JSON.stringify("Deleted successfully!")
         }
     }
