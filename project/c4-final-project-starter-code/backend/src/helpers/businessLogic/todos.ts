@@ -3,7 +3,10 @@ import { TodoItem } from '../../models/TodoItem'
 import { CreateTodoRequest } from '../../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
 import { AttachmentUtils } from '../../helpers/fileStorage/attachmentUtils';
+import { createLogger } from '../../utils/logger'
 import * as uuid from 'uuid'
+
+const logger = createLogger('Todos')
 
 // TODO: Implement businessLogic
 const todosAccess = new TodosAccess()
@@ -21,9 +24,14 @@ export async function updateTodos(userId: string, todoId :string, updateTodo :Up
   todosAccess.updateTodo(userId, todoId, updateTodo)
 }
 
+export async function createAttachmentPre(userId: string, todoId :string) : Promise<string> {
+  logger.info('Create attachment by user', userId, todoId)
+  return attachmentUtils.getAttachmentUrl(todoId)
+}
+
 export async function createTodos(
   createTodoRequest: CreateTodoRequest,
-  jwtToken: string
+  userId: string
 ): Promise<TodoItem> {
 
   const itemId = uuid.v4()
@@ -31,9 +39,11 @@ export async function createTodos(
   return await todosAccess.createTodo({
     todoId: itemId,
     createdAt: new Date().toISOString(),
+    name: createTodoRequest.name,
+    dueDate: createTodoRequest.dueDate,
     done: false,
     attachmentUrl: await attachmentUtils.createAttachmentURL(itemId),
-    userId: jwtToken,
+    userId: userId,
     ...createTodoRequest
   })
 }
