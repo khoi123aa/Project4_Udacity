@@ -36,29 +36,6 @@ provider:
     # Enable API Gateway logs
     restApi: true
 
-  iam:
-    role:
-      statements:
-        - Effect: Allow
-          Action:
-            - xray:PutTelemetryRecords
-            - xray:PutTraceSegments
-          Resource: "*"
-# custom:
-#   documentation:
-#     api:
-#       info:
-#         version: '1.0.0'
-#         title: define-serverless-api-p4
-#         description: define-serverless-api-p4
-#     models:
-#       - name: CreateTodoRequest
-#         contentType: "application/json"
-#         schema: ${file(models/create-todo-model.json)}
-#       - name: UpdateTodoRequest
-#         contentType: "application/json"
-#         schema: ${file(models/update-todo-model.json)}
-
 functions:
 
   Auth:
